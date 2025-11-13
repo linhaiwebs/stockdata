@@ -15,6 +15,9 @@ declare global {
 let isInitialized = false;
 let currentConfig: GoogleTrackingConfig | null = null;
 
+const EVENT_COOLDOWN_MS = 2000;
+const eventLastFired: Record<string, number> = {};
+
 export async function initializeGoogleTracking(): Promise<void> {
   if (isInitialized) {
     return;
@@ -141,5 +144,65 @@ export function trackEvent(eventName: string, parameters?: Record<string, any>):
     console.log('[Google Tracking] Event tracked:', eventName, parameters);
   } catch (error) {
     console.error('[Google Tracking] Failed to track event:', error);
+  }
+}
+
+function canFireEvent(eventName: string): boolean {
+  const now = Date.now();
+  const lastFired = eventLastFired[eventName] || 0;
+
+  if (now - lastFired < EVENT_COOLDOWN_MS) {
+    console.log(`[Google Tracking] Event "${eventName}" blocked - cooldown active`);
+    return false;
+  }
+
+  eventLastFired[eventName] = now;
+  return true;
+}
+
+export function trackDiagnosisClick(): void {
+  if (!isInitialized || !currentConfig) {
+    console.log('[Google Tracking] Tracking not initialized - Bdd event skipped');
+    return;
+  }
+
+  if (!canFireEvent('Bdd')) {
+    return;
+  }
+
+  try {
+    if (window.gtag) {
+      window.gtag('event', 'Bdd');
+      console.log('[Google Tracking] Bdd event tracked');
+    }
+  } catch (error) {
+    console.error('[Google Tracking] Failed to track Bdd event:', error);
+  }
+}
+
+export function trackConversionClick(): void {
+  if (!isInitialized || !currentConfig) {
+    console.log('[Google Tracking] Tracking not initialized - Add event skipped');
+    return;
+  }
+
+  if (!canFireEvent('Add')) {
+    return;
+  }
+
+  try {
+    if (window.gtag) {
+      window.gtag('event', 'Add');
+      console.log('[Google Tracking] Add event tracked');
+
+      if (currentConfig.conversion_action_id) {
+        window.gtag('event', 'conversion', {
+          send_to: currentConfig.conversion_action_id,
+        });
+        console.log('[Google Tracking] Conversion event tracked:', currentConfig.conversion_action_id);
+      }
+    }
+  } catch (error) {
+    console.error('[Google Tracking] Failed to track Add/conversion event:', error);
   }
 }

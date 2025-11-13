@@ -11,6 +11,7 @@ import { DiagnosisState } from '../types/diagnosis';
 import { useUrlParams } from '../hooks/useUrlParams';
 import { apiClient } from '../lib/apiClient';
 import { userTracking } from '../lib/userTracking';
+import { trackDiagnosisClick, trackConversionClick } from '../lib/googleTracking';
 
 const getDefaultStockData = (code: string): StockData => ({
   info: {
@@ -126,6 +127,8 @@ export default function NewHome() {
 
   const runDiagnosis = async () => {
     if (diagnosisState !== 'initial' || !stockData || !hasRealData) return;
+
+    trackDiagnosisClick();
 
     setDiagnosisState('connecting');
     setDiagnosisStartTime(Date.now());
@@ -309,6 +312,8 @@ export default function NewHome() {
   };
 
   const handleLineConversion = async () => {
+    trackConversionClick();
+
     try {
       console.log('Fetching LINE redirect link...');
       const response = await apiClient.get('/api/line-redirects/select');
